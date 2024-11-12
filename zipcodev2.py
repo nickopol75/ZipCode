@@ -89,7 +89,7 @@ if st.button("Find Closest Dealer"):
                 dealer_name = st.session_state.dealers.get(closest_zip, "Unknown Dealer")
                 st.success(f"The closest dealer is '{dealer_name}'\nZip code: {closest_zip}\nApproximately {distance:.2f} km away.")
                 # Add to search history
-                st.session_state.search_history.append(f"Searched: {dealer_name} - Found: {closest_zip}")
+                st.session_state.search_history.append(f"Searched: {dealer_name} - CustomerZip: {input_zip}")
             else:
                 st.error("Invalid zip code or unable to geocode.")
     else:
