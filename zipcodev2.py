@@ -4,7 +4,7 @@ from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 
 # Dictionary to store zip code and dealer name associations
-dealers = {  # Changed from 'dealer' to 'dealers'
+dealers = {  
     "3076": "Bächelmatt Garage Worb",
     "8106": "Garage R. Wallishauser AG",
     "3613": "Autohaus Thun-Nord AG",
@@ -49,7 +49,7 @@ if 'search_history' not in st.session_state:
     st.session_state.search_history = []
 
 # Streamlit app
-st.title("Swiss Dealer Finder")  # Fixed typo in title
+st.title("Swiss Dealer Finder")
 
 # Sidebar for adding and deleting dealers
 st.sidebar.header("Manage Dealers")
@@ -87,9 +87,9 @@ if st.button("Find Closest Dealer"):
             if result:
                 closest_zip, distance = result
                 dealer_name = dealers.get(closest_zip, "Unknown Dealer")
-                st.success(f"The closest dealer is '{dealer_name}'\nZip code: {closest_zip}\nApproximately {distance:.2f} km away.")  # Changed 'shop_name' to 'dealer_name'
+                st.success(f"The closest dealer is '{dealer_name}'\nZip code: {closest_zip}\nApproximately {distance:.2f} km away.")
                 # Add to search history
-                st.session_state.search_history.append(f"Searched: {input_zip} - Found: {closest_zip}")  # Changed 'input_dealer' to 'input_zip'
+                st.session_state.search_history.append(f"Searched: {dealer_name} - Found: {closest_zip}")
             else:
                 st.error("Invalid zip code or unable to geocode.")
     else:
