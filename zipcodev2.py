@@ -51,8 +51,10 @@ if 'search_history' not in st.session_state:
 # Streamlit app
 st.title("Swiss Dealer Finder")  # Fixed typo in title
 
-# Sidebar for adding new dealers
-st.sidebar.header("Add New Dealer")
+# Sidebar for adding and deleting dealers
+st.sidebar.header("Manage Dealers")
+
+# Add new dealer
 new_zip = st.sidebar.text_input("New Zip Code")
 new_dealer = st.sidebar.text_input("New Dealer Name")
 
@@ -62,6 +64,18 @@ if st.sidebar.button("Add Dealer"):
         st.sidebar.success(f"Added: {new_dealer} at {new_zip}")
     else:
         st.sidebar.error("Please enter both zip code and dealer name")
+
+# Delete dealer
+st.sidebar.markdown("---")
+delete_zip = st.sidebar.selectbox("Select Zip Code to Delete", options=list(dealers.keys()))
+
+if st.sidebar.button("Delete Dealer"):
+    if delete_zip in dealers:
+        deleted_dealer = dealers[delete_zip]
+        del dealers[delete_zip]
+        st.sidebar.success(f"Deleted: {deleted_dealer} at {delete_zip}")
+    else:
+        st.sidebar.error("Selected zip code not found")
 
 # Main app
 input_zip = st.text_input("Enter a Swiss zip code:")
@@ -75,7 +89,7 @@ if st.button("Find Closest Dealer"):
                 dealer_name = dealers.get(closest_zip, "Unknown Dealer")
                 st.success(f"The closest dealer is '{dealer_name}'\nZip code: {closest_zip}\nApproximately {distance:.2f} km away.")  # Changed 'shop_name' to 'dealer_name'
                 # Add to search history
-                st.session_state.search_history.append(f"Searched: {dealer_name} - Found: {closest_zip}")  # Changed 'input_dealer' to 'input_zip'
+                st.session_state.search_history.append(f"Searched: {input_zip} - Found: {closest_zip}")  # Changed 'input_dealer' to 'input_zip'
             else:
                 st.error("Invalid zip code or unable to geocode.")
     else:
