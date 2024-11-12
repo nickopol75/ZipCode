@@ -102,6 +102,6 @@ if st.session_state.search_history:
         st.text(search)
 
 # Display current dealers
-st.header("Current Dealers")  # Changed to plural
+st.header("Current Dealers") 
 for zip_code, dealer_name in dealers.items():
     st.text(f"{zip_code}: {dealer_name}")
