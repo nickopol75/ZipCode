@@ -22,15 +22,17 @@ dealers = {
 @st.cache_data
 def geocode_zip(zip_code):
     geolocator = Nominatim(user_agent="swiss_dealer_finder")
-    location = geolocator.geocode(f"{zip_code}, Switzerland", country_codes="CH")
-    if location and "Switzerland" in location.address:
-        return location
-    return None
+    location = geolocator.geocode(f"{zip_code}, Switzerland")
+    return location
 
-def is_valid_swiss_zip(zip_code):
-    return zip_code.isdigit() and len(zip_code) == 4
+def is_valid_switzerland_zip(zip_code):
+    """Check if the zip code is a valid Swiss postal code."""
+    return zip_code.isdigit() and len(zip_code) == 4 and 1000 <= int(zip_code) <= 9999
 
 def find_closest_zip(input_zip):
+    if not is_valid_switzerland_zip(input_zip):
+        return None
+    
     input_location = geocode_zip(input_zip)
     if not input_location:
         return None
@@ -56,37 +58,23 @@ if 'search_history' not in st.session_state:
 # Streamlit app
 st.title("Swiss Dealer Finder")
 
-# Sidebar for adding and deleting dealers
-st.sidebar.header("Manage Dealers")
-
-# Add new dealer
+# Sidebar for adding new dealers
+st.sidebar.header("Add New Dealer")
 new_zip = st.sidebar.text_input("New Zip Code")
 new_dealer = st.sidebar.text_input("New Dealer Name")
 
 if st.sidebar.button("Add Dealer"):
-    if new_zip and new_dealer and is_valid_swiss_zip(new_zip):
+    if new_zip and new_dealer:
         dealers[new_zip] = new_dealer
         st.sidebar.success(f"Added: {new_dealer} at {new_zip}")
     else:
-        st.sidebar.error("Please enter a valid Swiss zip code (4 digits) and dealer name")
-
-# Delete dealer
-st.sidebar.markdown("---")
-delete_zip = st.sidebar.selectbox("Select Zip Code to Delete", options=list(dealers.keys()))
-
-if st.sidebar.button("Delete Dealer"):
-    if delete_zip in dealers:
-        deleted_dealer = dealers[delete_zip]
-        del dealers[delete_zip]
-        st.sidebar.success(f"Deleted: {deleted_dealer} at {delete_zip}")
-    else:
-        st.sidebar.error("Selected zip code not found")
+        st.sidebar.error("Please enter both zip code and dealer name")
 
 # Main app
 input_zip = st.text_input("Enter a Swiss zip code:")
 
 if st.button("Find Closest Dealer"):
-    if input_zip and is_valid_swiss_zip(input_zip):
+    if input_zip:
         with st.spinner("Searching..."):
             result = find_closest_zip(input_zip)
             if result:
@@ -96,9 +84,9 @@ if st.button("Find Closest Dealer"):
                 # Add to search history
                 st.session_state.search_history.append(f"Searched: {dealer_name} - Found: {closest_zip}")
             else:
-                st.error("Unable to find a matching Swiss location.")
+                st.error("Invalid zip code or unable to geocode.")
     else:
-        st.warning("Please enter a valid Swiss zip code (4 digits).")
+        st.warning("Please enter a zip code.")
 
 # Display search history
 if st.session_state.search_history:
