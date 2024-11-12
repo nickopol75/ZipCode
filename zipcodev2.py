@@ -4,7 +4,7 @@ from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 
 # Dictionary to store zip code and dealer name associations
-dealers = {  
+dealers = {
     "3076": "Bächelmatt Garage Worb",
     "8106": "Garage R. Wallishauser AG",
     "3613": "Autohaus Thun-Nord AG",
@@ -22,8 +22,13 @@ dealers = {
 @st.cache_data
 def geocode_zip(zip_code):
     geolocator = Nominatim(user_agent="swiss_dealer_finder")
-    location = geolocator.geocode(f"{zip_code}, Switzerland")
-    return location
+    location = geolocator.geocode(f"{zip_code}, Switzerland", country_codes="CH")
+    if location and "Switzerland" in location.address:
+        return location
+    return None
+
+def is_valid_swiss_zip(zip_code):
+    return zip_code.isdigit() and len(zip_code) == 4
 
 def find_closest_zip(input_zip):
     input_location = geocode_zip(input_zip)
@@ -59,11 +64,11 @@ new_zip = st.sidebar.text_input("New Zip Code")
 new_dealer = st.sidebar.text_input("New Dealer Name")
 
 if st.sidebar.button("Add Dealer"):
-    if new_zip and new_dealer:
+    if new_zip and new_dealer and is_valid_swiss_zip(new_zip):
         dealers[new_zip] = new_dealer
         st.sidebar.success(f"Added: {new_dealer} at {new_zip}")
     else:
-        st.sidebar.error("Please enter both zip code and dealer name")
+        st.sidebar.error("Please enter a valid Swiss zip code (4 digits) and dealer name")
 
 # Delete dealer
 st.sidebar.markdown("---")
@@ -81,7 +86,7 @@ if st.sidebar.button("Delete Dealer"):
 input_zip = st.text_input("Enter a Swiss zip code:")
 
 if st.button("Find Closest Dealer"):
-    if input_zip:
+    if input_zip and is_valid_swiss_zip(input_zip):
         with st.spinner("Searching..."):
             result = find_closest_zip(input_zip)
             if result:
@@ -91,9 +96,9 @@ if st.button("Find Closest Dealer"):
                 # Add to search history
                 st.session_state.search_history.append(f"Searched: {dealer_name} - Found: {closest_zip}")
             else:
-                st.error("Invalid zip code or unable to geocode.")
+                st.error("Unable to find a matching Swiss location.")
     else:
-        st.warning("Please enter a zip code.")
+        st.warning("Please enter a valid Swiss zip code (4 digits).")
 
 # Display search history
 if st.session_state.search_history:
@@ -102,6 +107,6 @@ if st.session_state.search_history:
         st.text(search)
 
 # Display current dealers
-st.header("Current Dealers") 
+st.header("Current Dealers")
 for zip_code, dealer_name in dealers.items():
     st.text(f"{zip_code}: {dealer_name}")
