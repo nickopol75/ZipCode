@@ -12,7 +12,6 @@ if 'dealers' not in st.session_state:
         "6330": "Imholz Autohaus AG",
         "7205": "Garage O. Stock AG",
         "4503": "Gysin + Gerspacher AG",
-        "6210": "Auto Birrer AG",
         "9500": "alphaCARS.CH AG – Wil",
         "5432": "Garage Matter AG",
         "9014": "alphaCARS.CH AG – Oberuzwil",
