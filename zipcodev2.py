@@ -9,7 +9,6 @@ if 'dealers' not in st.session_state:
         "3076": "Bächelmatt Garage Worb",
         "8106": "Garage R. Wallishauser AG",
         "3613": "Autohaus Thun-Nord AG",
-        "6330": "Imholz Autohaus AG",
         "7205": "Garage O. Stock AG",
         "4503": "Gysin + Gerspacher AG",
         "9500": "alphaCARS.CH AG – Wil",
