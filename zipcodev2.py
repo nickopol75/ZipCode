@@ -16,6 +16,7 @@ if 'dealers' not in st.session_state:
         "9014": "alphaCARS.CH AG – Oberuzwil",
         "9242": "alphaCARS.CH AG – St. Gallen",
         "6467": "Brand Automobile AG"
+        "4950": "Garage Rupli"
     }
 
 if 'search_history' not in st.session_state:
