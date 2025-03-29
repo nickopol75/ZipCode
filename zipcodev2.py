@@ -1,4 +1,4 @@
-# Swiss Dealer Finder - Streamlit App with Map Visualization
+# Swiss Dealer Finder - Streamlit App with Map Visualization and Auto-Zoom
 import streamlit as st
 import pandas as pd
 import time
@@ -26,8 +26,8 @@ def initialize_session_state():
         }
     if 'search_history' not in st.session_state:
         st.session_state.search_history = []
-    if 'map_html' not in st.session_state:
-        st.session_state.map_html = None
+    if 'map_data' not in st.session_state:
+        st.session_state.map_data = {}
 
 # Cache geolocation results
 @st.cache_data(ttl=86400)
@@ -103,38 +103,49 @@ with search_col:
                         'timestamp': time.strftime("%Y-%m-%d %H:%M:%S")
                     })
 
-                    # Map Visualization
-                    m = folium.Map(location=[input_location.latitude, input_location.longitude], zoom_start=9)
-                    folium.Marker(
-                        [input_location.latitude, input_location.longitude],
-                        popup=f"Input Zip: {input_zip}",
-                        tooltip="You are here",
-                        icon=folium.Icon(color="blue", icon="user")
-                    ).add_to(m)
-                    folium.Marker(
-                        [closest_location.latitude, closest_location.longitude],
-                        popup=f"Dealer: {dealer_name}",
-                        tooltip="Closest Dealer",
-                        icon=folium.Icon(color="green", icon="car")
-                    ).add_to(m)
-                    folium.PolyLine(
-                        [(input_location.latitude, input_location.longitude),
-                         (closest_location.latitude, closest_location.longitude)],
-                        color="red",
-                        weight=2.5,
-                        opacity=1
-                    ).add_to(m)
-
-                    st.session_state.map_html = m
+                    # Save for map rendering outside form
+                    st.session_state.map_data = {
+                        'input_location': (input_location.latitude, input_location.longitude),
+                        'closest_location': (closest_location.latitude, closest_location.longitude),
+                        'dealer_name': dealer_name,
+                        'input_zip': input_zip
+                    }
 
                 else:
                     st.error("No dealer found for the given zip code.")
         else:
             st.warning("Please enter a valid 4-digit Swiss zip code.")
 
-    if st.session_state.map_html:
-        st.markdown("### 🗺️ Dealer Map")
-        st_folium(st.session_state.map_html, width=700)
+# Render map if data exists
+if 'map_data' in st.session_state and st.session_state.map_data:
+    data = st.session_state.map_data
+    lat1, lon1 = data['input_location']
+    lat2, lon2 = data['closest_location']
+    center_lat = (lat1 + lat2) / 2
+    center_lon = (lon1 + lon2) / 2
+
+    m = folium.Map(location=[center_lat, center_lon], zoom_start=11)
+    folium.Marker(
+        [lat1, lon1],
+        popup=f"Input Zip: {data['input_zip']}",
+        tooltip="You are here",
+        icon=folium.Icon(color="blue", icon="user")
+    ).add_to(m)
+    folium.Marker(
+        [lat2, lon2],
+        popup=f"Dealer: {data['dealer_name']}",
+        tooltip="Closest Dealer",
+        icon=folium.Icon(color="green", icon="car")
+    ).add_to(m)
+    folium.PolyLine(
+        [(lat1, lon1), (lat2, lon2)],
+        color="red",
+        weight=2.5,
+        opacity=1
+    ).add_to(m)
+
+    st.markdown("### 🗺️ Dealer Map")
+    st_folium(m, width=700)
 
 # Management Section
 with manage_col:
