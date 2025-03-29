@@ -26,6 +26,8 @@ def initialize_session_state():
         }
     if 'search_history' not in st.session_state:
         st.session_state.search_history = []
+    if 'map_html' not in st.session_state:
+        st.session_state.map_html = None
 
 # Cache geolocation results
 @st.cache_data(ttl=86400)
@@ -123,13 +125,16 @@ with search_col:
                         opacity=1
                     ).add_to(m)
 
-                    st.markdown("### 🗺️ Dealer Map")
-                    st_folium(m, width=700)
+                    st.session_state.map_html = m
 
                 else:
                     st.error("No dealer found for the given zip code.")
         else:
             st.warning("Please enter a valid 4-digit Swiss zip code.")
+
+    if st.session_state.map_html:
+        st.markdown("### 🗺️ Dealer Map")
+        st_folium(st.session_state.map_html, width=700)
 
 # Management Section
 with manage_col:
