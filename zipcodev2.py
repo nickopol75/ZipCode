@@ -92,10 +92,10 @@ with search_col:
                     })
 
                     result_msg = (
-                        f"**Closest Dealer:**\n{name:=<20} {top_two[0][1]} ({top_two[0][0]})\n"
-                        f"Distance: {top_two[0][3]:.2f} km\n\n"
-                        f"**Second Closest Dealer:**\n{name:=<20} {top_two[1][1]} ({top_two[1][0]})\n"
-                        f"Distance: {top_two[1][3]:.2f} km"
+                        f"**Closest Dealer:**\n"
+                        f"Name: {top_two[0][1]}\nZip: {top_two[0][0]}\nDistance: {top_two[0][3]:.2f} km\n\n"
+                        f"**Second Closest Dealer:**\n"
+                        f"Name: {top_two[1][1]}\nZip: {top_two[1][0]}\nDistance: {top_two[1][3]:.2f} km"
                     )
                     st.session_state.dealer_result = result_msg
                     st.session_state.map_data = {
