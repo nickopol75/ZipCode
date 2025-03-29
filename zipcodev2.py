@@ -1,4 +1,4 @@
-# Swiss Dealer Finder - Streamlit App with Map Visualization and Persistent Dealer Info
+# Swiss Dealer Finder - Streamlit App with Map Visualization and Two Closest Dealers
 import streamlit as st
 import pandas as pd
 import time
@@ -31,7 +31,6 @@ def initialize_session_state():
     if 'dealer_result' not in st.session_state:
         st.session_state.dealer_result = None
 
-# Cache geolocation results
 @st.cache_data(ttl=86400)
 def geocode_zip(zip_code):
     try:
@@ -41,17 +40,13 @@ def geocode_zip(zip_code):
         st.error(f"Geocoding error: {str(e)}")
         return None
 
-# Find closest dealer by zip code
-def find_closest_dealer(input_zip):
+def find_two_closest_dealers(input_zip):
     input_location = geocode_zip(input_zip)
     if not input_location:
-        return None, None, None
+        return None, []
 
-    closest_zip = None
-    min_distance = float('inf')
-    closest_location = None
-
-    for zip_code in st.session_state.dealers:
+    dealer_distances = []
+    for zip_code, name in st.session_state.dealers.items():
         location = geocode_zip(zip_code)
         if location:
             try:
@@ -59,97 +54,103 @@ def find_closest_dealer(input_zip):
                     (input_location.latitude, input_location.longitude),
                     (location.latitude, location.longitude)
                 ).kilometers
-                if distance < min_distance:
-                    closest_zip = zip_code
-                    min_distance = distance
-                    closest_location = location
+                dealer_distances.append((zip_code, name, location, distance))
             except ValueError:
                 continue
 
-    return closest_zip, min_distance, closest_location
+    dealer_distances.sort(key=lambda x: x[3])  # sort by distance
+    return input_location, dealer_distances[:2]
 
-# App configuration
 st.set_page_config(page_title="Swiss Dealer Finder", page_icon="🚗", layout="wide")
 initialize_session_state()
 
-# Header
 st.title("🇨🇭 Swiss Dealer Finder")
 st.markdown("""
-Easily find the nearest registered car dealer in Switzerland by entering your zip code.
+Easily find the two nearest registered car dealers in Switzerland by entering your zip code.
 """)
 
-# Layout
 search_col, manage_col = st.columns([2, 1])
 
-# Search Section
 with search_col:
-    st.header("🔍 Find a Dealer")
+    st.header("🔍 Find Dealers")
     with st.form(key="search_form"):
         input_zip = st.text_input("Enter a Swiss zip code:", max_chars=4, placeholder="e.g., 8001")
-        submit_button = st.form_submit_button("Find Closest Dealer")
+        submit_button = st.form_submit_button("Find Closest Dealers")
 
     if submit_button:
         if input_zip and input_zip.isdigit() and len(input_zip) == 4:
-            with st.spinner("Locating nearest dealer..."):
+            with st.spinner("Finding closest dealers..."):
                 time.sleep(0.5)
-                closest_zip, distance, closest_location = find_closest_dealer(input_zip)
-                input_location = geocode_zip(input_zip)
-                if closest_zip:
-                    dealer_name = st.session_state.dealers[closest_zip]
-                    st.session_state.dealer_result = f"**{dealer_name}**\nZip: {closest_zip} | Distance: {distance:.2f} km"
+                input_location, top_two = find_two_closest_dealers(input_zip)
+                if top_two:
                     st.session_state.search_history.append({
                         'input_zip': input_zip,
-                        'dealer': dealer_name,
-                        'dealer_zip': closest_zip,
-                        'distance': distance,
+                        'dealer': top_two[0][1],
+                        'dealer_zip': top_two[0][0],
+                        'distance': top_two[0][3],
                         'timestamp': time.strftime("%Y-%m-%d %H:%M:%S")
                     })
+
+                    result_msg = (
+                        f"**Closest Dealer:**\n{name:=<20} {top_two[0][1]} ({top_two[0][0]})\n"
+                        f"Distance: {top_two[0][3]:.2f} km\n\n"
+                        f"**Second Closest Dealer:**\n{name:=<20} {top_two[1][1]} ({top_two[1][0]})\n"
+                        f"Distance: {top_two[1][3]:.2f} km"
+                    )
+                    st.session_state.dealer_result = result_msg
                     st.session_state.map_data = {
+                        'input_zip': input_zip,
                         'input_location': (input_location.latitude, input_location.longitude),
-                        'closest_location': (closest_location.latitude, closest_location.longitude),
-                        'dealer_name': dealer_name,
-                        'input_zip': input_zip
+                        'dealers': [
+                            {
+                                'name': top_two[0][1], 'zip': top_two[0][0],
+                                'latlon': (top_two[0][2].latitude, top_two[0][2].longitude),
+                                'distance': top_two[0][3], 'rank': 'Closest'
+                            },
+                            {
+                                'name': top_two[1][1], 'zip': top_two[1][0],
+                                'latlon': (top_two[1][2].latitude, top_two[1][2].longitude),
+                                'distance': top_two[1][3], 'rank': 'Second Closest'
+                            }
+                        ]
                     }
                 else:
-                    st.error("No dealer found for the given zip code.")
+                    st.error("No dealers found for the given zip code.")
         else:
             st.warning("Please enter a valid 4-digit Swiss zip code.")
 
     if st.session_state.dealer_result:
         st.success(st.session_state.dealer_result)
 
-# Render map if data exists
 if st.session_state.map_data:
     data = st.session_state.map_data
-    lat1, lon1 = data['input_location']
-    lat2, lon2 = data['closest_location']
-    center_lat = (lat1 + lat2) / 2
-    center_lon = (lon1 + lon2) / 2
-
-    m = folium.Map(location=[center_lat, center_lon], zoom_start=11)
+    input_lat, input_lon = data['input_location']
+    m = folium.Map(location=[input_lat, input_lon], zoom_start=11)
     folium.Marker(
-        [lat1, lon1],
+        [input_lat, input_lon],
         popup=f"Input Zip: {data['input_zip']}",
         tooltip="You are here",
         icon=folium.Icon(color="blue", icon="user")
     ).add_to(m)
-    folium.Marker(
-        [lat2, lon2],
-        popup=f"Dealer: {data['dealer_name']}",
-        tooltip="Closest Dealer",
-        icon=folium.Icon(color="green", icon="car")
-    ).add_to(m)
-    folium.PolyLine(
-        [(lat1, lon1), (lat2, lon2)],
-        color="red",
-        weight=2.5,
-        opacity=1
-    ).add_to(m)
+
+    for dealer in data['dealers']:
+        lat, lon = dealer['latlon']
+        folium.Marker(
+            [lat, lon],
+            popup=f"{dealer['rank']} Dealer: {dealer['name']} ({dealer['zip']})\n{dealer['distance']:.2f} km",
+            tooltip=dealer['rank'],
+            icon=folium.Icon(color="green" if dealer['rank'] == 'Closest' else "orange", icon="car")
+        ).add_to(m)
+        folium.PolyLine(
+            [(input_lat, input_lon), (lat, lon)],
+            color="red" if dealer['rank'] == 'Closest' else "orange",
+            weight=2.5,
+            opacity=1
+        ).add_to(m)
 
     st.markdown("### 🗺️ Dealer Map")
     st_folium(m, width=700)
 
-# Management Section
 with manage_col:
     st.header("⚙️ Manage Dealers")
     with st.expander("➕ Add Dealer"):
@@ -189,6 +190,5 @@ with tab2:
     else:
         st.info("No search history yet.")
 
-# Footer
 st.markdown("---")
 st.caption("Built with ❤️ using Streamlit, Folium, and Geopy | Data: Swiss Zip Codes")
