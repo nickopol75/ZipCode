@@ -1,4 +1,4 @@
-# Swiss Dealer Finder - Streamlit App with Map Visualization and Auto-Zoom
+# Swiss Dealer Finder - Streamlit App with Map Visualization and Persistent Dealer Info
 import streamlit as st
 import pandas as pd
 import time
@@ -28,6 +28,8 @@ def initialize_session_state():
         st.session_state.search_history = []
     if 'map_data' not in st.session_state:
         st.session_state.map_data = {}
+    if 'dealer_result' not in st.session_state:
+        st.session_state.dealer_result = None
 
 # Cache geolocation results
 @st.cache_data(ttl=86400)
@@ -94,7 +96,7 @@ with search_col:
                 input_location = geocode_zip(input_zip)
                 if closest_zip:
                     dealer_name = st.session_state.dealers[closest_zip]
-                    st.success(f"**{dealer_name}**\nZip: {closest_zip} | Distance: {distance:.2f} km")
+                    st.session_state.dealer_result = f"**{dealer_name}**\nZip: {closest_zip} | Distance: {distance:.2f} km"
                     st.session_state.search_history.append({
                         'input_zip': input_zip,
                         'dealer': dealer_name,
@@ -102,22 +104,22 @@ with search_col:
                         'distance': distance,
                         'timestamp': time.strftime("%Y-%m-%d %H:%M:%S")
                     })
-
-                    # Save for map rendering outside form
                     st.session_state.map_data = {
                         'input_location': (input_location.latitude, input_location.longitude),
                         'closest_location': (closest_location.latitude, closest_location.longitude),
                         'dealer_name': dealer_name,
                         'input_zip': input_zip
                     }
-
                 else:
                     st.error("No dealer found for the given zip code.")
         else:
             st.warning("Please enter a valid 4-digit Swiss zip code.")
 
+    if st.session_state.dealer_result:
+        st.success(st.session_state.dealer_result)
+
 # Render map if data exists
-if 'map_data' in st.session_state and st.session_state.map_data:
+if st.session_state.map_data:
     data = st.session_state.map_data
     lat1, lon1 = data['input_location']
     lat2, lon2 = data['closest_location']
