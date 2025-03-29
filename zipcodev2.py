@@ -1,10 +1,12 @@
-# Swiss Dealer Finder - Professional Streamlit Interface
+# Swiss Dealer Finder - Streamlit App with Map Visualization
 import streamlit as st
 import pandas as pd
 import time
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
+import folium
+from streamlit_folium import st_folium
 
 # Initialize dealer data and search history in session state
 def initialize_session_state():
@@ -39,10 +41,11 @@ def geocode_zip(zip_code):
 def find_closest_dealer(input_zip):
     input_location = geocode_zip(input_zip)
     if not input_location:
-        return None, None
+        return None, None, None
 
     closest_zip = None
     min_distance = float('inf')
+    closest_location = None
 
     for zip_code in st.session_state.dealers:
         location = geocode_zip(zip_code)
@@ -55,10 +58,11 @@ def find_closest_dealer(input_zip):
                 if distance < min_distance:
                     closest_zip = zip_code
                     min_distance = distance
+                    closest_location = location
             except ValueError:
                 continue
 
-    return closest_zip, min_distance
+    return closest_zip, min_distance, closest_location
 
 # App configuration
 st.set_page_config(page_title="Swiss Dealer Finder", page_icon="🚗", layout="wide")
@@ -84,7 +88,8 @@ with search_col:
         if input_zip and input_zip.isdigit() and len(input_zip) == 4:
             with st.spinner("Locating nearest dealer..."):
                 time.sleep(0.5)
-                closest_zip, distance = find_closest_dealer(input_zip)
+                closest_zip, distance, closest_location = find_closest_dealer(input_zip)
+                input_location = geocode_zip(input_zip)
                 if closest_zip:
                     dealer_name = st.session_state.dealers[closest_zip]
                     st.success(f"**{dealer_name}**\nZip: {closest_zip} | Distance: {distance:.2f} km")
@@ -95,6 +100,32 @@ with search_col:
                         'distance': distance,
                         'timestamp': time.strftime("%Y-%m-%d %H:%M:%S")
                     })
+
+                    # Map Visualization
+                    m = folium.Map(location=[input_location.latitude, input_location.longitude], zoom_start=9)
+                    folium.Marker(
+                        [input_location.latitude, input_location.longitude],
+                        popup=f"Input Zip: {input_zip}",
+                        tooltip="You are here",
+                        icon=folium.Icon(color="blue", icon="user")
+                    ).add_to(m)
+                    folium.Marker(
+                        [closest_location.latitude, closest_location.longitude],
+                        popup=f"Dealer: {dealer_name}",
+                        tooltip="Closest Dealer",
+                        icon=folium.Icon(color="green", icon="car")
+                    ).add_to(m)
+                    folium.PolyLine(
+                        [(input_location.latitude, input_location.longitude),
+                         (closest_location.latitude, closest_location.longitude)],
+                        color="red",
+                        weight=2.5,
+                        opacity=1
+                    ).add_to(m)
+
+                    st.markdown("### 🗺️ Dealer Map")
+                    st_folium(m, width=700)
+
                 else:
                     st.error("No dealer found for the given zip code.")
         else:
@@ -142,4 +173,4 @@ with tab2:
 
 # Footer
 st.markdown("---")
-st.caption("Built with ❤️ using Streamlit | Powered by Geopy | Data: Swiss Zip Codes")
+st.caption("Built with ❤️ using Streamlit, Folium, and Geopy | Data: Swiss Zip Codes")
